@@ -1,12 +1,16 @@
 import argparse
+import sys
 from loguru import logger
+import requests
 
+version = "0.1.0-beta.3"
 
+@logger.catch()
 def main():
     logger.add("./logs/self-Update_{time}.log", level="INFO", retention="1 days", rotation="500 MB", compression="zip")
-    parser = argparse.ArgumentParser(description="Update itself")
-    parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
-    parser.add_argument("--version", action="version", version="self-Update 1.0.0")
+    parser = argparse.ArgumentParser(prog="self-Update", description="Update itself")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose output")
+    parser.add_argument("--version", action="version", version=version)
     parser.add_argument("--text", "-t", type=str, help="Text to display", default="Hello, World!")
     args = parser.parse_args()
 
@@ -14,8 +18,34 @@ def main():
     if args.verbose:
         logger.remove()
         logger.add("./logs/self-Update_{time}.log", level="DEBUG", retention="1 days", rotation="500 MB", compression="zip")
+        logger.add(sys.stdout, level="DEBUG")
+
 
     logger.info("System loaded successfully.")
+
+    # update logic
+    check_update()
+
+    program(args)
+
+@logger.catch(level="WARNING")
+def check_update(): 
+    username = "grish"
+    repo = "self-Update"
+    latest_release_url = f"https://api.github.com/repos/{username}/{repo}/releases/latest"
+    response = requests.get(latest_release_url)
+
+    release_data = response.json()
+    logger.debug(release_data)
+    latest_version = release_data["tag_name"]
+    logger.debug(f"Latest version: {latest_version}, Current version: {version}")
+
+    if latest_version != version:
+        logger.info(f"New version available: {latest_version}. Current version: {version}.")
+    else:
+        logger.debug(f"You are using the latest version: {version}.")
+
+def program(args):
     logger.info(f"TEXT: {args.text}")
 
 if __name__ == "__main__":
